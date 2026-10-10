@@ -1,3 +1,6 @@
+import warnings
+
+warnings.filterwarnings("ignore", category=FutureWarning)
 import numpy as np
 from sklift.metrics import qini_auc_score, uplift_auc_score, uplift_at_k
 
@@ -36,5 +39,7 @@ if __name__ == "__main__":
     df = pd.read_parquet("data/criteo.parquet")
     val = df.loc[np.load("splits/val_idx.npy")]
     rng = np.random.default_rng(1)
-    show("random score (val)",
-         evaluate(val.visit, rng.random(len(val)), val.treatment, n_boot=50))
+    show(
+        "random score (val)",
+        evaluate(val.visit, rng.random(len(val)), val.treatment, n_boot=50),
+    )
