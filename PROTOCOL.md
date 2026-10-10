@@ -14,8 +14,8 @@ License CC BY-NC-SA 4.0. Cite Diemert et al., AdKDD 2018.
 - The test split is opened once, on Day 5 (Wed 14 Oct).
 
 ## Metrics
-- Primary: AUUC from the Qini curve (scikit-uplift, for every model).
-- Secondary: uplift@20%, and the same metrics on conversion.
+- Primary: Qini AUC (scikit-uplift `qini_auc_score`), for every model.
+- Secondary: uplift AUC (AUUC) and uplift@20%, and the same metrics on conversion.
 - 95% bootstrap intervals on every metric, 3 seeds for the PyTorch model.
 - Overlapping intervals are reported as a tie.
 
