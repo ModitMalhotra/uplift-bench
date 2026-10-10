@@ -18,6 +18,7 @@ License CC BY-NC-SA 4.0. Cite Diemert et al., AdKDD 2018.
 - Secondary: uplift AUC (AUUC) and uplift@20%, and the same metrics on conversion.
 - 95% bootstrap intervals on every metric, 3 seeds for the PyTorch model.
 - Overlapping intervals are reported as a tie.
+- Secondary analysis added on 10 Oct after seeing validation results: paired bootstrap of Qini AUC differences against the response model, plus score correlations. The primary rule (overlapping intervals count as a tie) is unchanged.
 
 ## Rules
 - Tuning (Optuna) uses validation only, with a capped number of trials.
