@@ -40,6 +40,11 @@ def tens(d):
 
 Xtr, Ttr, Ytr = tens(train)
 Xva, Tva, Yva = tens(val)
+Xte = torch.tensor(
+    ((df.loc[np.load("splits/test_idx.npy"), feats] - mu) / sd).to_numpy(np.float32)
+).to(
+    dev
+)  # features only
 
 
 class DragonNet(nn.Module):
@@ -99,11 +104,12 @@ def val_loss(model):
 
 
 @torch.no_grad()
-def uplift(model):
+def uplift(model, X=None):
+    X = Xva if X is None else X
     model.eval()
     out = []
-    for i in range(0, len(Xva), 65536):
-        l1, l0, lp = model(Xva[i : i + 65536])
+    for i in range(0, len(X), 65536):
+        l1, l0, lp = model(X[i : i + 65536])
         if (
             BETA > 0
         ):  # use the corrected predictions: H = 1/g for treated, -1/(1-g) for control
@@ -145,6 +151,7 @@ for seed in SEEDS:
     res = evaluate(val["visit"], uplift(model), val["treatment"])
     name = f"{VARIANT}_seed{seed}"
     np.save(f"results/scores_val_{name}.npy", uplift(model))
+    np.save(f"results/scores_test_{name}.npy", uplift(model, Xte))
     show(f"{name} (val)", res)
     rows += [
         {"model": name, "metric": m, "value": v, "lo": lo, "hi": hi}

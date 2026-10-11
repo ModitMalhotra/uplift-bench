@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings("ignore")
 
 import sys
@@ -37,10 +38,15 @@ print(f"fit: {time.time() - t0:.0f}s")
 score = cf.effect(val[feats]).ravel()
 res = evaluate(val["visit"], score, val["treatment"])
 name = f"causal_forest_{N // 1000}k"
+test_X = df.loc[np.load("splits/test_idx.npy"), feats]
+np.save(f"results/scores_val_{name}.npy", score)
+np.save(f"results/scores_test_{name}.npy", cf.effect(test_X).ravel())
 show(f"{name} (val)", res)
 
-rows = [{"model": name, "metric": m, "value": v, "lo": lo, "hi": hi}
-        for m, (v, lo, hi) in res.items()]
+rows = [
+    {"model": name, "metric": m, "value": v, "lo": lo, "hi": hi}
+    for m, (v, lo, hi) in res.items()
+]
 old = pd.read_csv("results/val_results.csv")
 old = old[old["model"] != name]
 pd.concat([old, pd.DataFrame(rows)]).to_csv("results/val_results.csv", index=False)

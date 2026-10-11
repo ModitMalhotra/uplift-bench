@@ -35,6 +35,7 @@ License CC BY-NC-SA 4.0. Cite Diemert et al., AdKDD 2018.
   hypothesis is that the S-learner earns more profit than the response model at V = 50
   (mean profit over budgets 1-40%, paired bootstrap, 95% interval). All other comparisons on
   the test split are exploratory and reported as such.
+- Scoring the test features (no labels) with already-fitted models, so scores can be saved ahead of time, is not opening the test split. Test labels are read only by `test_final.py --split test`, which runs once.
 
 ## Test-split plan (frozen 11 Oct 2026, before the test split was opened)
 
