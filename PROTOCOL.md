@@ -19,6 +19,7 @@ License CC BY-NC-SA 4.0. Cite Diemert et al., AdKDD 2018.
 - 95% bootstrap intervals on every metric, 3 seeds for the PyTorch model.
 - Overlapping intervals are reported as a tie.
 - Secondary analysis added on 10 Oct after seeing validation results: paired bootstrap of Qini AUC differences against the response model, plus score correlations. The primary rule (overlapping intervals count as a tie) is unchanged.
+- Deviation (11 Oct 2026): conversion is not evaluated. At 0.29% it is too sparse for stable intervals; visit is the only outcome reported.
 
 ## Rules
 - Tuning (Optuna) uses validation only, with a capped number of trials.
@@ -34,3 +35,25 @@ License CC BY-NC-SA 4.0. Cite Diemert et al., AdKDD 2018.
   hypothesis is that the S-learner earns more profit than the response model at V = 50
   (mean profit over budgets 1-40%, paired bootstrap, 95% interval). All other comparisons on
   the test split are exploratory and reported as such.
+
+## Test-split plan (frozen 11 Oct 2026, before the test split was opened)
+
+Models evaluated, each fit on the full train split with the tuned settings in best_params.json
+(fixed as of this date; no re-tuning):
+- response model (LightGBM, ignores treatment)
+- S-learner, T-learner, X-learner (LightGBM)
+- Causal forest: the final model is fit on the full train split. Runs on 400k-row subsamples (200 and 800 trees) were sensitivity checks on validation only.
+- TARNet and DragonNet (3 seeds each; seeds 0, 1, 2; early stopping on validation factual loss)
+
+Metrics on test (95% bootstrap intervals): Qini AUC (primary), uplift AUC, uplift@20%.
+Overlapping intervals are reported as a tie.
+
+Profit: for each model and each V in {10, 25, 50, 100, 200}, the budget is the one that maximizes
+validation profit for that model. That fixed budget is applied once to the test split.
+Deep models: profit curves are averaged over their 3 seeds before choosing the budget.
+Treat-all and random targeting are reported as references.
+
+Primary (confirmatory) comparison: S-learner vs response model, V = 50, mean profit over
+budgets 1-40%, paired bootstrap. All other comparisons are exploratory.
+
+Test is opened once. Whatever the result, it is reported.
