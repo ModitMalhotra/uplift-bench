@@ -123,6 +123,7 @@ for seed in SEEDS:
     print(f"seed {seed}: {epoch + 1} epochs, {time.time() - t0:.0f}s, eps {model.eps.item():+.4f}")
     res = evaluate(val["visit"], uplift(model), val["treatment"])
     name = f"{VARIANT}_seed{seed}"
+    np.save(f"results/scores_val_{name}.npy", uplift(model))
     show(f"{name} (val)", res)
     rows += [{"model": name, "metric": m, "value": v, "lo": lo, "hi": hi}
              for m, (v, lo, hi) in res.items()]

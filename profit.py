@@ -5,18 +5,8 @@ warnings.filterwarnings("ignore")
 import json
 import numpy as np
 import pandas as pd
-
+import os
 import learners as L
-
-# Profit-vs-budget simulation on VALIDATION. Test split stays closed until Day 5.
-#
-# Assumptions (Criteo has no prices, so everything is in units of the cost of showing one ad):
-#   - showing an ad costs 1 unit
-#   - one extra visit is worth V units  (V is varied in a sensitivity table)
-#   - we target the top-k fraction of users by score, k = budget
-#   - incremental visits in the targeted group = (treated visit rate - control visit rate) * group size,
-#     estimated from the randomized data inside that group (no model assumptions)
-#   - profit per user of the whole population = (n_k / N) * (uplift_k * V - 1)
 
 V_MAIN = 50
 V_GRID = [10, 25, 50, 100, 200]
@@ -42,14 +32,20 @@ MODELS = {
     "x_learner": L.x_learner,
 }
 
-scores = {}
+scores = {}  # name -> list of score arrays (3 seeds for the deep models)
 for name, fn in MODELS.items():
     p = best.get({"response": "response_lgbm"}.get(name, name))
     print(
         f"{name}: {'tuned params' if p else 'DEFAULT params (not found in best_params.json)'}"
     )
-    scores[name] = np.asarray(fn(Xtr, ytr, ttr, Xva, p))
-scores["random"] = np.random.default_rng(SEED).random(len(y))
+    scores[name] = [np.asarray(fn(Xtr, ytr, ttr, Xva, p))]
+for v in ["tarnet", "dragonnet"]:
+    files = [f"results/scores_val_{v}_seed{s}.npy" for s in range(3)]
+    if all(os.path.exists(f) for f in files):
+        scores[v] = [np.load(f) for f in files]
+    else:
+        print(v, "scores missing: rerun dragonnet.py")
+scores["random"] = [np.random.default_rng(SEED).random(len(y))]
 
 
 def curve(score, y, t, idx=None, V=V_MAIN):
@@ -67,14 +63,19 @@ def curve(score, y, t, idx=None, V=V_MAIN):
     return (ns + 1) / n * (up * V - 1), up
 
 
+def pcurve(slist, y, t, idx=None, V=V_MAIN):
+    return np.mean([curve(s, y, t, idx=idx, V=V)[0] for s in slist], axis=0)
+
+
 # 1) main curves with bootstrap bands at V_MAIN
 rng = np.random.default_rng(SEED)
 res = {}
-for name, s in scores.items():
-    pt, _ = curve(s, y, t)
-    boots = np.array(
-        [curve(s, y, t, idx=rng.integers(0, len(y), len(y)))[0] for _ in range(N_BOOT)]
-    )
+for name, sl in scores.items():
+    pt = pcurve(sl, y, t)
+    boots = []
+    for _ in range(N_BOOT):
+        boots.append(pcurve(sl, y, t, idx=rng.integers(0, len(y), len(y))))
+    boots = np.array(boots)
     res[name] = (
         pt,
         np.percentile(boots, 2.5, axis=0),
@@ -84,9 +85,9 @@ for name, s in scores.items():
 # 2) sensitivity table: best budget and profit vs treating everyone, for several V
 rows = []
 for V in V_GRID:
-    for name, s in scores.items():
-        pt, up = curve(s, y, t, V=V)
-        all_pt, _ = curve(scores["random"], y, t, V=V)
+    all_pt = pcurve(scores["random"], y, t, V=V)
+    for name, sl in scores.items():
+        pt = pcurve(sl, y, t, V=V)
         i = int(np.argmax(pt))
         rows.append(
             {
@@ -106,19 +107,14 @@ print("\nTreat everyone, per 1000 users:")
 print(sens[sens.model == "response"].set_index("V")["treat_all_per_1000"])
 sens.to_csv("results/profit_sensitivity_val.csv", index=False)
 
-# 3) chart
+# chart
 try:
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(8, 5))
     for name, (pt, lo, hi) in res.items():
-        ax.plot(
-            KS * 100,
-            pt * 1000,
-            label=name,
-            lw=2 if name != "random" else 1,
-            ls="--" if name == "random" else "-",
-        )
+        ax.plot(KS * 100, pt * 1000, label=name, lw=2 if name != "random" else 1,
+                ls="--" if name == "random" else "-")
         ax.fill_between(KS * 100, lo * 1000, hi * 1000, alpha=0.12)
     ax.axhline(0, color="grey", lw=0.8)
     ax.set_xlabel("Budget: % of users shown the ad (highest score first)")
