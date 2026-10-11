@@ -11,14 +11,17 @@ import torch.nn.functional as F
 
 from evaluate import evaluate, show
 
-# usage: python dragonnet.py [dragonnet|tarnet] [max_epochs]
+# usage: python dragonnet.py [tarnet|dragonnet] [max_epochs]
+#   tarnet     outcome heads only
+#   dragonnet  + propensity head + targeted regularization
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else "dragonnet"
 MAX_EPOCHS = int(sys.argv[2]) if len(sys.argv) > 2 else 30
 ALPHA = 1.0 if VARIANT == "dragonnet" else 0.0  # weight of the propensity loss
+BETA = 1.0 if VARIANT == "dragonnet" else 0.0  # weight of targeted regularization
 SEEDS = [0, 1, 2]
 BATCH, LR, PATIENCE = 4096, 1e-3, 3
 dev = "cuda" if torch.cuda.is_available() else "cpu"
-print("device:", dev)
+print("device:", dev, "| variant:", VARIANT)
 
 df = pd.read_parquet("data/criteo.parquet")
 train = df.loc[np.load("splits/train_idx.npy")]
@@ -46,6 +49,7 @@ class DragonNet(nn.Module):
         self.head1 = nn.Sequential(nn.Linear(h, hh), nn.ELU(), nn.Linear(hh, 1))  # treated
         self.head0 = nn.Sequential(nn.Linear(h, hh), nn.ELU(), nn.Linear(hh, 1))  # control
         self.prop = nn.Linear(h, 1)  # propensity head
+        self.eps = nn.Parameter(torch.zeros(1))  # targeted-regularization correction
 
     def forward(self, x):
         z = self.enc(x)
@@ -55,8 +59,16 @@ class DragonNet(nn.Module):
 def loss_fn(model, x, t, y):
     l1, l0, lp = model(x)
     logit_y = torch.where(t > 0.5, l1, l0)  # outcome head matching the real treatment
-    return (F.binary_cross_entropy_with_logits(logit_y, y)
-            + ALPHA * F.binary_cross_entropy_with_logits(lp, t))
+    loss = F.binary_cross_entropy_with_logits(logit_y, y)
+    if ALPHA > 0:
+        loss = loss + ALPHA * F.binary_cross_entropy_with_logits(lp, t)
+    if BETA > 0:
+        # clever covariate H = t/g - (1-t)/(1-g); the corrected logit is logit_y + eps * H.
+        # g is detached so this term only trains the outcome side and eps.
+        g = torch.sigmoid(lp).detach().clamp(0.01, 0.99)
+        h = t / g - (1 - t) / (1 - g)
+        loss = loss + BETA * F.binary_cross_entropy_with_logits(logit_y + model.eps * h, y)
+    return loss
 
 
 @torch.no_grad()
@@ -74,7 +86,11 @@ def uplift(model):
     model.eval()
     out = []
     for i in range(0, len(Xva), 65536):
-        l1, l0, _ = model(Xva[i:i + 65536])
+        l1, l0, lp = model(Xva[i:i + 65536])
+        if BETA > 0:  # use the corrected predictions: H = 1/g for treated, -1/(1-g) for control
+            g = torch.sigmoid(lp).clamp(0.01, 0.99)
+            l1 = l1 + model.eps / g
+            l0 = l0 - model.eps / (1 - g)
         out.append((torch.sigmoid(l1) - torch.sigmoid(l0)).cpu())
     return torch.cat(out).numpy()
 
@@ -104,7 +120,7 @@ for seed in SEEDS:
             if bad >= PATIENCE:
                 break
     model.load_state_dict(best_state)
-    print(f"seed {seed}: {epoch + 1} epochs, {time.time() - t0:.0f}s")
+    print(f"seed {seed}: {epoch + 1} epochs, {time.time() - t0:.0f}s, eps {model.eps.item():+.4f}")
     res = evaluate(val["visit"], uplift(model), val["treatment"])
     name = f"{VARIANT}_seed{seed}"
     show(f"{name} (val)", res)
