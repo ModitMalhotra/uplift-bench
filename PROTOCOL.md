@@ -30,3 +30,7 @@ License CC BY-NC-SA 4.0. Cite Diemert et al., AdKDD 2018.
 - Causal forest is trained on a random subsample of train (size stated in the results table) because of compute cost. It is scored on the same full validation set as every other model.
 - DragonNet/TARNet: early stopping on validation factual loss (patience 3), never on Qini. Three seeds, each reported separately plus mean and SD.
 - Profit simulation: the budget (share of users targeted) is chosen on validation only. On the test split that fixed budget is applied once; the test split is never used to choose it. Value of a visit (V) is an assumption, reported as a sensitivity table (V = 10, 25, 50, 100, 200). (added 11 Oct 2026, before the test split was opened)
+- Confirmatory test (declared 11 Oct 2026, before the test split was opened): the one primary
+  hypothesis is that the S-learner earns more profit than the response model at V = 50
+  (mean profit over budgets 1-40%, paired bootstrap, 95% interval). All other comparisons on
+  the test split are exploratory and reported as such.
