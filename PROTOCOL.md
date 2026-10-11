@@ -29,3 +29,4 @@ License CC BY-NC-SA 4.0. Cite Diemert et al., AdKDD 2018.
 - Optuna: 20 trials per model (the first is the default settings), same search space and seed for every model, tuned on a 400k-row slice of train and scored by validation Qini AUC. Final fits use all of train.
 - Causal forest is trained on a random subsample of train (size stated in the results table) because of compute cost. It is scored on the same full validation set as every other model.
 - DragonNet/TARNet: early stopping on validation factual loss (patience 3), never on Qini. Three seeds, each reported separately plus mean and SD.
+The “best budget” here is picked on the same validation rows, so the profit is slightly optimistic. On the test split we pick the budget from validation and apply it once to the test, so the reported profit is honest.
