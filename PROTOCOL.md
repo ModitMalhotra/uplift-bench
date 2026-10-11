@@ -27,3 +27,4 @@ License CC BY-NC-SA 4.0. Cite Diemert et al., AdKDD 2018.
 - Profit simulation assumptions are stated in the README.
 - Weak or negative results are reported as they are.
 - Optuna: 20 trials per model (the first is the default settings), same search space and seed for every model, tuned on a 400k-row slice of train and scored by validation Qini AUC. Final fits use all of train.
+- Causal forest is trained on a random subsample of train (size stated in the results table) because of compute cost. It is scored on the same full validation set as every other model.
