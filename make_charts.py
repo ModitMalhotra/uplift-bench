@@ -22,7 +22,9 @@ SEEDS = [0, 1, 2]
 VS = [25, 50, 100]
 N_BOOT = 50
 
-lab = pd.read_parquet("data/criteo.parquet", columns=["visit", "treatment"]).loc[np.load("splits/test_idx.npy")]
+lab = pd.read_parquet("data/criteo.parquet", columns=["visit", "treatment"]).loc[
+    np.load("splits/test_idx.npy")
+]
 y, t = lab["visit"].to_numpy(), lab["treatment"].to_numpy()
 
 scores = {
@@ -58,35 +60,62 @@ for ax, V in zip(axes, VS):
         bp = np.array([b[n][0] * (b[n][1] * V - 1) * 1000 for b in boots])
         lo, hi = np.percentile(bp, [2.5, 97.5], axis=0)
         if n == "random":
-            ax.plot(D.KS * 100, p, color="#6b6b6b", ls="--", lw=1.2, label="Random targeting")
+            ax.plot(
+                D.KS * 100,
+                p,
+                color="#6b6b6b",
+                ls="--",
+                lw=1.2,
+                label="Random targeting",
+            )
         else:
             col, _, label = Q.STYLE[n]
             ax.plot(D.KS * 100, p, color=col, lw=2, label=label)
             ax.fill_between(D.KS * 100, lo, hi, color=col, alpha=0.15, lw=0)
     ax.axhline(0, color="#999999", lw=0.8)
     ax.set_title(f"1 visit = {V} ads", fontsize=11, loc="left")
-    ax.set_xlabel("Budget: % of users shown the ad (highest score first)")
+    ax.set_xlabel("Budget: % of users shown the ad")
     ax.grid(alpha=0.25, lw=0.6)
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
 axes[0].set_ylabel("Profit per 1000 users (units of one ad's cost)")
-axes[0].legend(frameon=False, fontsize=8.5, loc="lower left")
-fig.suptitle("Profit vs budget (test split): targeting a small top slice of users beats showing the ad to everyone",
-             x=0.06, ha="left", fontsize=12)
+h, l = axes[0].get_legend_handles_labels()
+fig.legend(
+    h,
+    l,
+    loc="lower center",
+    ncol=4,
+    frameon=False,
+    fontsize=9,
+    bbox_to_anchor=(0.5, -0.08),
+)
+fig.suptitle(
+    "Profit vs budget (test split): targeting a small top slice of users beats showing the ad to everyone",
+    x=0.06,
+    ha="left",
+    fontsize=12,
+)
 fig.savefig("results/profit_vs_budget_test.png", dpi=150, bbox_inches="tight")
 plt.close(fig)
 print("saved results/profit_vs_budget_test.png")
 
 # 3) SHAP side by side (images made earlier by shap_analysis.py, validation split)
-imgs = [("results/shap_baseline_val.png", "Response model: who visits anyway"),
-        ("results/shap_s_learner_val.png", "S-learner: who the ad moves")]
+imgs = [
+    ("results/shap_baseline_val.png", "Response model: who visits anyway"),
+    ("results/shap_s_learner_val.png", "S-learner: who the ad moves"),
+]
 fig, axes = plt.subplots(1, 2, figsize=(14, 5.6))
 for ax, (p, ttl) in zip(axes, imgs):
     ax.imshow(mpimg.imread(p))
     ax.axis("off")
     ax.set_title(ttl, fontsize=12, loc="left")
-fig.suptitle("SHAP feature effects (validation split; surrogate R2 >= 0.99)", x=0.06, ha="left", fontsize=12)
-fig.tight_layout()
+fig.suptitle(
+    "SHAP feature effects (validation split; surrogate R2 >= 0.99)",
+    x=0.06,
+    ha="left",
+    fontsize=12,
+)
+fig.tight_layout(rect=[0, 0, 1, 0.93])
 fig.savefig("results/shap_comparison.png", dpi=150, bbox_inches="tight")
 plt.close(fig)
 print("saved results/shap_comparison.png")
