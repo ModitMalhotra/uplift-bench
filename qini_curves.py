@@ -43,22 +43,43 @@ def mean_qini(slist, y, t, idx=None):
     return np.mean([qini(s, y, t, idx) for s in slist], axis=0)
 
 
-def make_plot(scores, y, t, path):
+def make_plot(scores, y, t, path, split="validation"):
     rng = np.random.default_rng(SEED)
     res = {}
     for name, sl in scores.items():
         pt = mean_qini(sl, y, t)
-        boots = np.array([mean_qini(sl, y, t, rng.integers(0, len(y), len(y))) for _ in range(N_BOOT)])
-        res[name] = (pt, np.percentile(boots, 2.5, axis=0), np.percentile(boots, 97.5, axis=0))
-    total = qini(scores["response"][0], y, t)[-1]  # all users targeted: same for every score
+        boots = np.array(
+            [
+                mean_qini(sl, y, t, rng.integers(0, len(y), len(y)))
+                for _ in range(N_BOOT)
+            ]
+        )
+        res[name] = (
+            pt,
+            np.percentile(boots, 2.5, axis=0),
+            np.percentile(boots, 97.5, axis=0),
+        )
+    total = qini(scores["response"][0], y, t)[
+        -1
+    ]  # all users targeted: same for every score
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.6), gridspec_kw={"wspace": 0.22})
-    for ax, xmax, title in [(axes[0], 100, "All budgets"), (axes[1], 30, "Zoom: first 30%")]:
+    for ax, xmax, title in [
+        (axes[0], 100, "All budgets"),
+        (axes[1], 30, "Zoom: first 30%"),
+    ]:
         for name, (pt, lo, hi) in res.items():
             col, ls, label = STYLE[name]
             ax.plot(KS * 100, pt, color=col, ls=ls, lw=2, label=label)
             ax.fill_between(KS * 100, lo, hi, color=col, alpha=0.15, lw=0)
-        ax.plot([0, 100], [0, total], color="#6b6b6b", ls="--", lw=1.2, label="Random targeting")
+        ax.plot(
+            [0, 100],
+            [0, total],
+            color="#6b6b6b",
+            ls="--",
+            lw=1.2,
+            label="Random targeting",
+        )
         ax.set_xlim(0, xmax)
         if xmax < 100:
             m = KS * 100 <= xmax
@@ -71,8 +92,12 @@ def make_plot(scores, y, t, path):
             ax.spines[s].set_visible(False)
     axes[0].set_ylabel("Extra visits per 1000 users (cumulative)")
     axes[0].legend(frameon=False, loc="lower right", fontsize=9)
-    fig.suptitle("Qini curves (validation): the ad's extra visits, by who is targeted first",
-                 x=0.06, ha="left", fontsize=12)
+    fig.suptitle(
+        f"Qini curves ({split}): the ad's extra visits, by who is targeted first",
+        x=0.06,
+        ha="left",
+        fontsize=12,
+    )
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
@@ -89,7 +114,9 @@ def main():
     Xva, y, t = val[FEATS], val["visit"].to_numpy(), val["treatment"].to_numpy()
 
     scores = {
-        "response": [np.asarray(L.response_model(Xtr, ytr, ttr, Xva, best["response_lgbm"]))],
+        "response": [
+            np.asarray(L.response_model(Xtr, ytr, ttr, Xva, best["response_lgbm"]))
+        ],
         "s_learner": [np.asarray(L.s_learner(Xtr, ytr, ttr, Xva, best["s_learner"]))],
     }
     files = [f"results/scores_val_dragonnet_seed{s}.npy" for s in range(3)]
