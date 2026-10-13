@@ -128,14 +128,3 @@ python make_charts.py
 ```
 
 Supporting analyses: `deciles.py`, `profit.py`, `compare.py`, `disagreement.py`, `shap_analysis.py`, `qini_curves.py`.
-
-## References
-
-- Diemert, E., Betlei, A., Renaudin, C., Amini, M.-R. (2018). *A Large Scale Benchmark for Uplift Modeling.* AdKDD 2018 (KDD workshop). Dataset licence: CC BY-NC-SA 4.0.
-- Shi, C., Blei, D., Veitch, V. (2019). *Adapting Neural Networks for the Estimation of Treatment Effects.* NeurIPS 2019. (DragonNet)
-- Shalit, U., Johansson, F., Sontag, D. (2017). *Estimating individual treatment effect: generalization bounds and algorithms.* ICML 2017. (TARNet)
-- Künzel, S., Sekhon, J., Bickel, P., Yu, B. (2019). *Metalearners for estimating heterogeneous treatment effects using machine learning.* PNAS. (X-learner)
-
-## Licence note
-
-Code in this repository is for portfolio and educational use. The Criteo Uplift dataset is licensed CC BY-NC-SA 4.0 (non-commercial, share-alike) and is not redistributed here.
