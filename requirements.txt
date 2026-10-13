@@ -1,0 +1,12 @@
+numpy
+pandas
+pyarrow
+scipy
+scikit-learn
+scikit-uplift
+lightgbm
+optuna
+econml
+torch
+shap
+matplotlib
